@@ -11,6 +11,12 @@ from astropy import units as u
 from astropy import constants as const
 from astropy.coordinates import EarthLocation
 from pycraf import satellite
+from lsst.sims.utils import Site
+
+
+# adapting from:
+# https://github.com/cbassa/satellite_analysis
+# https://nbviewer.jupyter.org/github/yoachim/19_Scratch/blob/master/sat_collisions/bwinkel_constellation.ipynb
 
 
 def satellite_mean_motion(altitude, mu=const.GM_earth, r_earth=const.R_earth):
@@ -128,4 +134,11 @@ def _propagate(sat, dt):
 vec_propagate = np.vectorize(
     _propagate, excluded=['sat'], otypes=[np.float64] * 3)
 
+
+def lsst_location():
+    site = Site('LSST')
+    obs_loc_lsst =  EarthLocation(lat=site.latitude, lon=site.longitude,
+                                      height=site.height)
+    sat_obs_lsst = satellite.SatelliteObserver(obs_loc_lsst)
+    return sat_obs_lsst
 
