@@ -12,6 +12,8 @@ from astropy import constants as const
 from astropy.coordinates import EarthLocation
 from pycraf import satellite
 from lsst.sims.utils import Site
+import skyfield.sgp4lib as sgp4lib
+from astropy.time import Time
 
 
 # adapting from:
@@ -105,9 +107,13 @@ def starlink_constellation():
     return my_sats
 
 
+time_J2000 = datetime.datetime(2000, 1, 1, 12, 0)
+
+
 def _propagate(sat, dt):
     '''
-    True equator mean equinox (TEME) position from `sgp4` at given time.
+    True equator mean equinox (TEME) position from `sgp4` at given time. Then converted to ITRS
+
     Parameters
     ----------
     sat : `sgp4.io.Satellite` instance
@@ -128,17 +134,21 @@ def _propagate(sat, dt):
     if position is None:
         raise ValueError('Satellite propagation error')
 
-    return position
+    # I _think_ this is supposed to take time since J2000 in days?
+    # looking at https://space.stackexchange.com/questions/25988/sgp4-teme-frame-to-j2000-conversion
+    jd_ut1 = dt - time_J2000
+    jd_ut1 = jd_ut1.days + jd_ut1.seconds/(3600.*24)
+    new_position, new_velocity = sgp4lib.TEME_to_ITRF(jd_ut1, np.array(position), np.array(velocity)*86400)
+
+    return tuple(new_position.tolist())
 
 
-vec_propagate = np.vectorize(
-    _propagate, excluded=['sat'], otypes=[np.float64] * 3)
+vec_propagate = np.vectorize(_propagate, excluded=['sat'], otypes=[np.float64] * 3)
 
 
 def lsst_location():
     site = Site('LSST')
-    obs_loc_lsst =  EarthLocation(lat=site.latitude, lon=site.longitude,
-                                      height=site.height)
+    obs_loc_lsst = EarthLocation(lat=site.latitude, lon=site.longitude, height=site.height)
     sat_obs_lsst = satellite.SatelliteObserver(obs_loc_lsst)
     return sat_obs_lsst
 
