@@ -1,10 +1,6 @@
 import datetime
 import numpy as np
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib
-from matplotlib import animation, rc
 
 from astropy import time
 from astropy import units as u
@@ -193,6 +189,16 @@ class Constellation(object):
         self.observer.lon = telescope.longitude_rad
         self.observer.elevation = telescope.height
 
+    def advance_epoch(self, advance=100):
+        """
+        Advance the epoch of all the satellites
+        """
+
+        # Because someone went and put a valueError where there should have been a warning
+        # I prodly present the hackiest kludge of all time
+        for sat in self.sat_list:
+            sat._epoch += advance
+
     def update_mjd(self, mjd):
         """
         observer : ephem.Observer object
@@ -209,7 +215,6 @@ class Constellation(object):
             self.azimuth_rad.append(sat.az)
             self.eclip.append(sat.eclipsed)
 
-
         self.altitudes_rad = np.array(self.altitudes_rad)
         self.azimuth_rad = np.array(self.azimuth_rad)
         self.eclip = np.array(self.eclip)
@@ -222,14 +227,19 @@ class Constellation(object):
         """
         mjds = mjd + self.tsteps
 
-        
-
-
+        # convert the satellites above the limits to x,y,z and get the neighbors within the fov.
         pass
 
     def check_pointing(self, pointing_alt, pointing_az, mjd):
         """
         See if a pointing has a satellite in it
+
+        pointing_alt : float
+           Altitude of pointing (degrees)
+        pointing_az : float
+           Azimuth of pointing (degrees)
+        mjd : float
+           Modified Julian Date at the start of the exposure
         """
 
         mjds = mjd + self.tsteps
@@ -242,9 +252,3 @@ class Constellation(object):
             in_fov += np.size(np.where(ang_distances <= self.fov_rad)[0])
         in_fov = in_fov/mjds.size
         return in_fov
-
-
-
-
-
-
