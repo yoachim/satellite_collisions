@@ -233,7 +233,7 @@ class Constellation(object):
         # Keep track of the ones that are up and illuminated
         self.above_alt_limit = np.where((self.altitudes_rad >= self.alt_limit_rad) & (self.eclip == False))[0]
 
-    def fields_hit(self, mjd):
+    def fields_hit(self, mjd, fraction=False):
         """
         Return an array that lists the number of hits in each field pointing
         """
@@ -244,12 +244,17 @@ class Constellation(object):
         for mjd in mjds:
             self.update_mjd(mjd)
             x, y, z = _xyz_from_ra_dec(self.azimuth_rad[self.above_alt_limit], self.altitudes_rad[self.above_alt_limit])
-            indices = self.tree.query_ball_point(np.array([x, y, z]).T, self.radius)
-            final_indices = []
-            for indx in indices:
-                final_indices.extend(indx)
+            if np.size(x) > 0:
+                indices = self.tree.query_ball_point(np.array([x, y, z]).T, self.radius)
+                final_indices = []
+                for indx in indices:
+                    final_indices.extend(indx)
 
-            result[final_indices] += 1
+                result[final_indices] += 1
+
+        if fraction:
+            n_hit = np.size(np.where(result > 0)[0])
+            result = n_hit/self.fields_empty.size
         return result
 
     def check_pointing(self, pointing_alt, pointing_az, mjd):
