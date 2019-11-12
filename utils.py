@@ -240,6 +240,12 @@ class Constellation(object):
            Azimuth of pointing (degrees)
         mjd : float
            Modified Julian Date at the start of the exposure
+
+        Returns
+        -------
+        in_fov : float
+            Returns the fraction of time there is a satellite in the field of view. Values >1 mean there were
+            on average more than one satellite in the FoV. Zero means there was no satllite in the image the entire exposure.
         """
 
         mjds = mjd + self.tsteps
