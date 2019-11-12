@@ -11,7 +11,8 @@ from lsst.sims.utils import Site
 import skyfield.sgp4lib as sgp4lib
 from astropy.time import Time
 import ephem
-from lsst.sims.utils import _angularSeparation
+from lsst.sims.utils import _angularSeparation, _buildTree, _xyz_from_ra_dec, xyz_angular_radius
+from lsst.sims.featureScheduler.utils import read_fields
 
 
 # adapting from:
@@ -173,13 +174,24 @@ class Constellation(object):
         self._make_fields()
         self.tsteps = np.arange(0, exptime+tstep, tstep)/3600./24.  # to days
 
+        self.radius = xyz_angular_radius(fov)
+
     def _make_fields(self):
         """
         Make tesselation of the sky
         """
+        # RA and dec in radians
+        fields = read_fields()
 
-        # Read in the fields, build a kd-tree
-        pass
+        # crop off so we only worry about things that are up
+        good = np.where(fields['dec'] > (self.alt_limit_rad - self.fov_rad))[0]
+        self.fields = fields[good]
+
+        self.fields_empty = np.zeros(self.fields.size)
+
+        # we'll use a single tessellation of alt az
+        leafsize = 100
+        self.tree = _buildTree(self.fields['RA'], self.fields['dec'], leafsize, scale=None)
 
     def _make_observer(self):
         telescope = Site(name='LSST')
@@ -221,14 +233,24 @@ class Constellation(object):
         # Keep track of the ones that are up and illuminated
         self.above_alt_limit = np.where((self.altitudes_rad >= self.alt_limit_rad) & (self.eclip == False))[0]
 
-    def fraction_covered(self, mjd):
+    def fields_hit(self, mjd):
         """
-        Return the fraction of fields that would include a satellite at this time
+        Return an array that lists the number of hits in each field pointing
         """
         mjds = mjd + self.tsteps
+        result = self.fields_empty.copy()
 
         # convert the satellites above the limits to x,y,z and get the neighbors within the fov.
-        pass
+        for mjd in mjds:
+            self.update_mjd(mjd)
+            x, y, z = _xyz_from_ra_dec(self.azimuth_rad[self.above_alt_limit], self.altitudes_rad[self.above_alt_limit])
+            indices = self.tree.query_ball_point(np.array([x, y, z]).T, self.radius)
+            final_indices = []
+            for indx in indices:
+                final_indices.extend(indx)
+
+            result[final_indices] += 1
+        return result
 
     def check_pointing(self, pointing_alt, pointing_az, mjd):
         """

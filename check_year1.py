@@ -5,7 +5,6 @@ from utils import Constellation, starlink_constellation
 import sys
 
 
-
 def check_pointings(night_max=366, dbfile='baseline_v1.3_10yrs.db', outfile=None):
     """
     Check each pointing up to night
@@ -29,7 +28,7 @@ def check_pointings(night_max=366, dbfile='baseline_v1.3_10yrs.db', outfile=None
     for i, obs in df.iterrows():
         try:
             hit['hit'][i] = constellation.check_pointing(obs['altitude'], obs['azimuth'], obs['observationStartMJD'])
-        except:
+        except ValueError:
             constellation.advance_epoch()
             hit['hit'][i] = constellation.check_pointing(obs['altitude'], obs['azimuth'], obs['observationStartMJD'])
         progress = i/nobs*100
@@ -44,4 +43,4 @@ def check_pointings(night_max=366, dbfile='baseline_v1.3_10yrs.db', outfile=None
 
 
 if __name__ == '__main__':
-    check_pointings(night_max=2)
+    check_pointings()
