@@ -94,16 +94,35 @@ def create_constellation(altitudes, inclinations, nplanes, sats_per_plane, epoch
     return my_sat_tles
 
 
-def starlink_constellation():
+def starlink_constellation(supersize=False):
     """
     Create a list of satellite TLE's
     """
-    altitudes = np.array([550, 1110, 1130, 1275, 1325, 345.6, 340.8, 335.9]) * u.km
-    inclinations = np.array([53.0, 53.8, 74.0, 81.0, 70.0, 53.0, 48.0, 42.0]) * u.deg
+    altitudes = np.array([550, 1110, 1130, 1275, 1325, 345.6, 340.8, 335.9])
+    inclinations = np.array([53.0, 53.8, 74.0, 81.0, 70.0, 53.0, 48.0, 42.0])
     nplanes = np.array([72, 32, 8, 5, 6, 2547, 2478, 2493])
     sats_per_plane = np.array([22, 50, 50, 75, 75, 1, 1, 1])
 
-    my_sat_tles = create_constellation(altitudes, inclinations, nplanes, sats_per_plane, name='Starlink')
+    if supersize:
+        # Let's make 4 more altitude and inclinations
+        new_altitudes = []
+        new_inclinations = []
+        new_nplanes = []
+        new_sat_pp = []
+        for i in np.arange(0, 3):
+            new_altitudes.append(altitudes+i*20)
+            new_inclinations.append(inclinations+3*i)
+            new_nplanes.append(nplanes)
+            new_sat_pp.append(sats_per_plane)
+
+        altitudes = np.concatenate(new_altitudes)
+        inclinations = np.concatenate(new_inclinations)
+        nplanes = np.concatenate(new_nplanes)
+        sats_per_plane = np.concatenate(new_sat_pp)
+
+    altitudes = altitudes * u.km
+    inclinations = inclinations * u.deg
+    my_sat_tles = create_constellation(altitudes, inclinations, nplanes, sats_per_plane, name='Starl')
 
     return my_sat_tles
 
@@ -222,7 +241,11 @@ class Constellation(object):
         self.azimuth_rad = []
         self.eclip = []
         for sat in self.sat_list:
-            sat.compute(self.observer)
+            try:
+                sat.compute(self.observer)
+            except ValueError:
+                self.advance_epoch()
+                sat.compute(self.observer)
             self.altitudes_rad.append(sat.alt)
             self.azimuth_rad.append(sat.az)
             self.eclip.append(sat.eclipsed)
