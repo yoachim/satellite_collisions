@@ -20,7 +20,7 @@ def night_fractions(length=3660, supersize=False):
 
     alm = Almanac(mjd_start=mjd_start)
 
-    sat_tles = starlink_constellation(scale=scale)
+    sat_tles = starlink_constellation(supersize=supersize)
     constellation = Constellation(sat_tles)
 
     night_report = alm.get_sunset_info(mjd_start)
