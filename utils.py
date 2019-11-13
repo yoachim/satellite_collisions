@@ -68,7 +68,7 @@ def tle_from_orbital_parameters(sat_name, sat_nr, epoch, inclination, raan,
 def create_constellation(altitudes, inclinations, nplanes, sats_per_plane, epoch=22050.1, name='Test'):
 
     my_sat_tles = []
-    sat_nr = 80000
+    sat_nr = 8000
     for alt, inc, n, s in zip(
             altitudes, inclinations, nplanes, sats_per_plane):
 
