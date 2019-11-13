@@ -7,7 +7,7 @@ from utils import Constellation, starlink_constellation
 import sys
 
 
-def night_fractions(length=366):
+def night_fractions(length=3660):
     """
     Find the fraction of fields that have a satellite in them
     """
@@ -41,6 +41,9 @@ def night_fractions(length=366):
             result.append(current_night)
             result_fractions.append(result)
             result_mjds.append(mjds)
+            text = "\rnight = %i" % current_night
+            sys.stdout.write(text)
+            sys.stdout.flush
 
         current_night = night_report['night']
     return result_fractions, result_mjds
