@@ -13,11 +13,38 @@ from astropy.time import Time
 import ephem
 from lsst.sims.utils import _angularSeparation, _buildTree, _xyz_from_ra_dec, xyz_angular_radius
 from lsst.sims.featureScheduler.utils import read_fields
+import healpy as hp
+
 
 
 # adapting from:
 # https://github.com/cbassa/satellite_analysis
 # https://nbviewer.jupyter.org/github/yoachim/19_Scratch/blob/master/sat_collisions/bwinkel_constellation.ipynb
+
+
+def grow_hp(inmap, hpids, radius=1.75, replace_val=np.nan):
+    """
+    grow a healpix mask
+
+    Parameters
+    ----------
+    inmap : np.array
+        A HEALpix map
+    hpids : array
+        The healpixel values to grow around
+    radius : float (1.75)
+        The radius to grow around each point (degrees)
+    replace_val : float (np.nan)
+        The value to plug into the grown areas
+    """
+    nside = hp.npix2nside(np.size(inmap))
+    theta, phi = hp.pix2ang(nside=nside, ipix=hpids)
+    vec = hp.ang2vec(theta, phi)
+    ipix_disc = [hp.query_disc(nside=nside, vec=vector, radius=np.radians(radius)) for vector in vec]
+    ipix_disc = np.unique(np.concatenate(ipix_disc))
+    outmap = inmap + 0
+    outmap[ipix_disc] = replace_val
+    return outmap
 
 
 def satellite_mean_motion(altitude, mu=const.GM_earth, r_earth=const.R_earth):
