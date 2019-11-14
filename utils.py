@@ -109,7 +109,7 @@ def starlink_constellation(supersize=False):
         new_inclinations = []
         new_nplanes = []
         new_sat_pp = []
-        for i in np.arange(0, 3):
+        for i in np.arange(0, 4):
             new_altitudes.append(altitudes+i*20)
             new_inclinations.append(inclinations+3*i)
             new_nplanes.append(nplanes)
