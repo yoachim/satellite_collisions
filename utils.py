@@ -335,3 +335,19 @@ class Constellation(object):
             in_fov += np.size(np.where(ang_distances <= self.fov_rad)[0])
         in_fov = in_fov/mjds.size
         return in_fov
+
+    def look_ahead(self, pointing_alt, pointing_az, mjds):
+        """
+        Return 1 if satellite in FoV, 0 if clear
+        """
+        result = []
+        for mjd in mjds:
+            self.update_mjd(mjd)
+            ang_distances = _angularSeparation(self.azimuth_rad[self.above_alt_limit], self.altitudes_rad[self.above_alt_limit],
+                                               np.radians(pointing_az), np.radians(pointing_alt))
+            if np.size(np.where(ang_distances <= self.fov_rad)[0]) > 0:
+                result.append(1)
+            else:
+                result.append(0)
+        return result
+

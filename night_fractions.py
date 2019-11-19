@@ -50,7 +50,8 @@ def night_fractions(length=3660, supersize=False):
 
 
 if __name__ == '__main__':
-    supersize = True
+    #supersize = True
+    supersize = False
     result_fractions, result_mjds = night_fractions(supersize=supersize)
     extra = ''
     if supersize:
