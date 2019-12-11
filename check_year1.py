@@ -5,13 +5,15 @@ from utils import Constellation, starlink_constellation
 import sys
 
 
-def check_pointings(night_max=366, dbfile='baseline_v1.3_10yrs.db', outfile=None, supersize=False):
+def check_pointings(night_max=366, dbfile='baseline_v1.3_10yrs.db', outfile=None, supersize=False, fivek=False):
     """
     Check each pointing up to night
     """
     extra_fn = ''
     if supersize:
-        extra_fn = 'supersize_'
+        extra_fn += 'supersize_'
+    if fivek:
+        extra_fn += 'fivek_'
 
     conn = sqlite3.connect(dbfile)
     df = pd.read_sql('select observationId, altitude, azimuth, observationStartMJD, night from summaryallprops where night <= %i order by observationId' % night_max, conn)
@@ -25,7 +27,7 @@ def check_pointings(night_max=366, dbfile='baseline_v1.3_10yrs.db', outfile=None
 
     hit['observationId'] = df['observationStartMJD'].values
 
-    sat_tles = starlink_constellation(supersize=supersize)
+    sat_tles = starlink_constellation(supersize=supersize, fivek=fivek)
     constellation = Constellation(sat_tles)
 
     for i, obs in df.iterrows():
@@ -47,4 +49,5 @@ def check_pointings(night_max=366, dbfile='baseline_v1.3_10yrs.db', outfile=None
 
 if __name__ == '__main__':
     #check_pointings()
-    check_pointings(supersize=True)
+    #check_pointings(supersize=True)
+    check_pointings(fivek=True)

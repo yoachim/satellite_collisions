@@ -121,7 +121,7 @@ def create_constellation(altitudes, inclinations, nplanes, sats_per_plane, epoch
     return my_sat_tles
 
 
-def starlink_constellation(supersize=False):
+def starlink_constellation(supersize=False, fivek=False):
     """
     Create a list of satellite TLE's
     """
@@ -150,6 +150,10 @@ def starlink_constellation(supersize=False):
     altitudes = altitudes * u.km
     inclinations = inclinations * u.deg
     my_sat_tles = create_constellation(altitudes, inclinations, nplanes, sats_per_plane, name='Starl')
+
+    if fivek:
+        stride = round(len(my_sat_tles)/5000)
+        my_sat_tles = my_sat_tles[::stride]
 
     return my_sat_tles
 
