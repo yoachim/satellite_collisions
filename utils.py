@@ -11,15 +11,307 @@ from lsst.sims.utils import Site
 import skyfield.sgp4lib as sgp4lib
 from astropy.time import Time
 import ephem
-from lsst.sims.utils import _angularSeparation, _buildTree, _xyz_from_ra_dec, xyz_angular_radius
-from lsst.sims.featureScheduler.utils import read_fields
 import healpy as hp
+import numbers
+from scipy.spatial import cKDTree as kdTree
 
+import os
+import sqlite3
 
 
 # adapting from:
 # https://github.com/cbassa/satellite_analysis
 # https://nbviewer.jupyter.org/github/yoachim/19_Scratch/blob/master/sat_collisions/bwinkel_constellation.ipynb
+
+class FieldsDatabase(object):
+
+    FIELDS_DB = "Fields.db"
+    """Internal file containing the standard 3.5 degree FOV survey field
+       information."""
+
+    def __init__(self):
+        """Initialize the class.
+        """
+        self.db_name = self.FIELDS_DB
+        self.connect = sqlite3.connect(os.path.join(os.path.dirname(__file__),
+                                       self.db_name))
+
+    def __del__(self):
+        """Delete the class.
+        """
+        self.connect.close()
+
+    def get_field_set(self, query):
+        """Get a set of Field instances.
+
+        Parameters
+        ----------
+        query : str
+            The query for field retrieval.
+
+        Returns
+        -------
+        set
+            The collection of Field instances.
+        """
+        field_set = set()
+        rows = self.get_rows(query)
+        for row in rows:
+            field_set.add(tuple(row))
+
+        return field_set
+
+    def get_opsim3_userregions(self, query, precision=2):
+        """Get a formatted string of OpSim3 user regions.
+
+        This function gets a formatted string of OpSim3 user regions suitable
+        for an OpSim3 configuration file. The format looks like
+        (RA,Dec,Width):
+
+        userRegion = XXX.XX,YYY.YY,0.03
+        ...
+
+        The last column is unused in OpSim3. The precision argument can be
+        used to control the formatting, but OpSim3 configuration files use 2
+        digits as standard.
+
+        Parameters
+        ----------
+        query : str
+            The query for field retrieval.
+        precision : int, optional
+            The precision used for the RA and Dec columns. Default is 2.
+
+        Returns
+        -------
+        str
+            The OpSim3 user regions formatted string.
+        """
+        format_str = "userRegion = "\
+                     "{{:.{0}f}},{{:.{0}f}},0.03".format(precision)
+        rows = self.get_rows(query)
+        result = []
+        for row in rows:
+            result.append(format_str.format(row[2], row[3]))
+        return str(os.linesep.join(result))
+
+    def get_ra_dec_arrays(self, query):
+        """Retrieve lists of RA and Dec.
+
+        Parameters
+        ----------
+        query : str
+            The query for field retrieval.
+
+        Returns
+        -------
+        numpy.array, numpy.array
+            The arrays of RA and Dec.
+        """
+        rows = self.get_rows(query)
+        ra = []
+        dec = []
+        for row in rows:
+            ra.append(row[2])
+            dec.append(row[3])
+
+        return np.array(ra), np.array(dec)
+
+    def get_id_ra_dec_arrays(self, query):
+        """Retrieve lists of fieldId, RA and Dec.
+
+        Parameters
+        ----------
+        query : str
+            The query for field retrieval.
+
+        Returns
+        -------
+        numpy.array, numpy.array, numpy.array
+            The arrays of fieldId, RA and Dec.
+        """
+        rows = self.get_rows(query)
+        fieldId = []
+        ra = []
+        dec = []
+        for row in rows:
+            fieldId.append(int(row[0]))
+            ra.append(row[2])
+            dec.append(row[3])
+
+        return np.array(fieldId, dtype=int), np.array(ra), np.array(dec)
+
+    def get_rows(self, query):
+        """Get the rows from a query.
+
+        This function hands back all rows from a query. This allows one to
+        perform other operations on the information than those provided by
+        this class.
+
+        Parameters
+        ----------
+        query : str
+            The query for field retrieval.
+
+        Returns
+        -------
+        list
+            The set of field information queried.
+        """
+        cursor = self.connect.cursor()
+        cursor.execute(query)
+        return cursor.fetchall()
+
+
+
+def read_fields():
+    """
+    Read in the Field coordinates
+    Returns
+    -------
+    numpy.array
+        With RA and dec in radians.
+    """
+    query = 'select fieldId, fieldRA, fieldDEC from Field;'
+    fd = FieldsDatabase()
+    fields = np.array(list(fd.get_field_set(query)))
+    # order by field ID
+    fields = fields[fields[:,0].argsort()]
+
+    names = ['RA', 'dec']
+    types = [float, float]
+    result = np.zeros(np.size(fields[:, 1]), dtype=list(zip(names, types)))
+    result['RA'] = np.radians(fields[:, 1])
+    result['dec'] = np.radians(fields[:, 2])
+
+    return result
+
+
+def xyz_angular_radius(radius=1.75):
+    """
+    Convert an angular radius into a physical radius for a kdtree search.
+
+    Parameters
+    ----------
+    radius : float
+        Radius in degrees.
+
+    Returns
+    -------
+    radius : float
+    """
+    return _xyz_angular_radius(np.radians(radius))
+
+
+def _xyz_angular_radius(radius):
+    """
+    Convert an angular radius into a physical radius for a kdtree search.
+
+    Parameters
+    ----------
+    radius : float
+        Radius in radians.
+
+    Returns
+    -------
+    radius : float
+    """
+    x0, y0, z0 = (1, 0, 0)
+    x1, y1, z1 = _xyz_from_ra_dec(radius, 0)
+    result = np.sqrt((x1-x0)**2+(y1-y0)**2+(z1-z0)**2)
+    return result
+
+def _xyz_from_ra_dec(ra, dec):
+    """
+    Utility to convert RA,dec positions in x,y,z space.
+
+    Parameters
+    ----------
+    ra : float or array
+        RA in radians
+    dec : float or array
+        Dec in radians
+
+    Returns
+    -------
+    x,y,z : floats or arrays
+        The position of the given points on the unit sphere.
+    """
+    # It is ok to mix floats and numpy arrays.
+
+    cosDec = np.cos(dec)
+    return np.array([np.cos(ra) * cosDec, np.sin(ra) * cosDec, np.sin(dec)])
+
+
+
+def _angularSeparation(long1, lat1, long2, lat2):
+    """
+    Angular separation between two points in radians
+
+    Parameters
+    ----------
+    long1 is the first longitudinal coordinate in radians
+
+    lat1 is the first latitudinal coordinate in radians
+
+    long2 is the second longitudinal coordinate in radians
+
+    lat2 is the second latitudinal coordinate in radians
+
+    Returns
+    -------
+    The angular separation between the two points in radians
+
+    Calculated based on the haversine formula
+    From http://en.wikipedia.org/wiki/Haversine_formula
+    """
+
+
+    t1 = np.sin(lat2/2.0 - lat1/2.0)**2
+    t2 = np.cos(lat1)*np.cos(lat2)*np.sin(long2/2.0 - long1/2.0)**2
+    _sum = t1 + t2
+
+    if isinstance(_sum, numbers.Number):
+        if _sum<0.0:
+            _sum = 0.0
+    else:
+        _sum = np.where(_sum<0.0, 0.0, _sum)
+
+    return 2.0*np.arcsin(np.sqrt(_sum))
+
+
+def _buildTree(ra, dec, leafsize=100, scale=None):
+    """
+    Build KD tree on simDataRA/Dec and set radius (via setRad) for matching.
+
+    Parameters
+    ----------
+    ra, dec : float (or arrays)
+        RA and Dec values (in radians).
+    leafsize : int (100)
+        The number of Ra/Dec pointings in each leaf node.
+    scale : float (None)
+        If set, the values are scaled up, rounded, and converted to integers. Useful for
+        forcing a set precision and preventing machine precision differences
+    """
+    if np.any(np.abs(ra) > np.pi * 2.0) or np.any(np.abs(dec) > np.pi * 2.0):
+        raise ValueError('Expecting RA and Dec values to be in radians.')
+    x, y, z = _xyz_from_ra_dec(ra, dec)
+    if scale is not None:
+        x = np.round(x*scale).astype(int)
+        y = np.round(y*scale).astype(int)
+        z = np.round(z*scale).astype(int)
+    data = list(zip(x, y, z))
+    if np.size(data) > 0:
+        try:
+            tree = kdTree(data, leafsize=leafsize, balanced_tree=False, compact_nodes=False)
+        except TypeError:
+            tree = kdTree(data, leafsize=leafsize)
+    else:
+        raise ValueError('ra and dec should have length greater than 0.')
+
+    return tree
+
 
 
 def grow_hp(inmap, hpids, radius=1.75, replace_val=np.nan):
