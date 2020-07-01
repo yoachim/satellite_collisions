@@ -508,7 +508,7 @@ class Constellation(object):
         The time step to use when computing satellite positions in an exposure
     """
 
-    def __init__(self, sat_tle_list, alt_limit=30., fov=3.5, tstep=5., exptime=30.):
+    def __init__(self, sat_tle_list, alt_limit=2., fov=3.5, tstep=5., exptime=30.):
         self.sat_list = [ephem.readtle(tle.split('\n')[0], tle.split('\n')[1], tle.split('\n')[2]) for tle in sat_tle_list]
         self.alt_limit_rad = np.radians(alt_limit)
         self.fov_rad = np.radians(fov)
