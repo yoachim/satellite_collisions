@@ -121,7 +121,7 @@ def create_constellation(altitudes, inclinations, nplanes, sats_per_plane, epoch
     return my_sat_tles
 
 
-def starlink_constellation(supersize=False, fivek=False):
+def starlink_constellation(supersize=False, fivek=False, fourk=False):
     """
     Create a list of satellite TLE's
     """
@@ -130,11 +130,18 @@ def starlink_constellation(supersize=False, fivek=False):
     #nplanes = np.array([72, 32, 8, 5, 6, 2547, 2478, 2493])
     #sats_per_plane = np.array([22, 50, 50, 75, 75, 1, 1, 1])
 
+
     # new values from Bruce Macintosh from FCC application
     altitudes = np.array([328, 334, 345, 360, 373, 499, 604, 614], dtype=float)
     inclinations = np.array([30., 40., 53., 96.9, 75., 53, 148., 115.7])
     nplanes = np.array([1, 1, 1, 40, 1, 1, 12, 18])
     sats_per_plane = np.array([7178, 7178, 7178, 50, 1998, 4000, 12, 18])
+
+    if fourk:
+        altitudes = np.array([540, 550, 560], dtype=float)
+        inclinations = np.array([96.9, 75., 148.])
+        nplanes = np.array([40, 1, 12])
+        sats_per_plane = np.array([50, 2281, 12])
 
     if supersize:
         # Let's make 4 more altitude and inclinations

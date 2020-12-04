@@ -7,7 +7,7 @@ from utils import Constellation, starlink_constellation
 import sys
 
 
-def night_fractions(length=3660, supersize=False):
+def night_fractions(length=366, supersize=False, fourk=False):
     """
     Find the fraction of fields that have a satellite in them
     """
@@ -20,7 +20,7 @@ def night_fractions(length=3660, supersize=False):
 
     alm = Almanac(mjd_start=mjd_start)
 
-    sat_tles = starlink_constellation(supersize=supersize)
+    sat_tles = starlink_constellation(supersize=supersize, fourk=fourk)
     constellation = Constellation(sat_tles)
 
     night_report = alm.get_sunset_info(mjd_start)
@@ -52,8 +52,11 @@ def night_fractions(length=3660, supersize=False):
 if __name__ == '__main__':
     #supersize = True
     supersize = False
-    result_fractions, result_mjds = night_fractions(supersize=supersize)
+    fourk = True
+    result_fractions, result_mjds = night_fractions(supersize=supersize, fourk=fourk)
     extra = ''
     if supersize:
         extra = 'super'
+    if fourk:
+        extra='4k'
     np.savez('contam_fractions_scale'+extra+'.npz', result_fractions=result_fractions, result_mjds=np.array(result_mjds))
