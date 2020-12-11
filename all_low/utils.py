@@ -138,10 +138,10 @@ def starlink_constellation(supersize=False, fivek=False, fourk=False):
     sats_per_plane = np.array([7178, 7178, 7178, 50, 1998, 4000, 12, 18])
 
     if fourk:
-        altitudes = np.array([540, 550, 560], dtype=float)
-        inclinations = np.array([96.9, 75., 148.])
-        nplanes = np.array([40, 1, 12])
-        sats_per_plane = np.array([50, 2281, 12])
+        altitudes = np.array([550, 540, 570, 560, 560], dtype=float)
+        inclinations = np.array([53, 53.2, 70, 97.6, 97.6])
+        nplanes = np.array([72, 72, 36, 6, 4])
+        sats_per_plane = np.array([22, 22, 20, 58, 43])
 
     if supersize:
         # Let's make 4 more altitude and inclinations
