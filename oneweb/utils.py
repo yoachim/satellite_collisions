@@ -104,9 +104,9 @@ def create_constellation(altitudes, inclinations, nplanes, sats_per_plane, epoch
             mas = np.random.uniform(0, 360, n) * u.deg
             raans = np.random.uniform(0, 360, n) * u.deg
         else:
-            mas = np.linspace(0.0, 360.0, s, endpoint=False) * u.deg
+            mas = np.linspace(0, 360, int(s), endpoint=False) * u.deg
             mas += np.random.uniform(0, 360, 1) * u.deg
-            raans = np.linspace(0.0, 360.0, n, endpoint=False) * u.deg
+            raans = np.linspace(0, 360, n, endpoint=False) * u.deg
             mas, raans = np.meshgrid(mas, raans)
             mas, raans = mas.flatten(), raans.flatten()
 
